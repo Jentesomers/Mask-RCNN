@@ -176,6 +176,7 @@ def train(model):
     dataset_val.load_custom(r"C:\Users\jente\OneDrive\Documenten\GitHub\Mask-RCNN\Dataset", "val")
     dataset_val.prepare()
 
+    print('Both datasets have been prepared')
     # *** This training schedule is an example. Update to your needs ***
     # Since we're using a very small dataset, and starting from
     # COCO trained weights, we don't need to train too long. Also,
@@ -187,10 +188,17 @@ def train(model):
                 layers='heads')
 			
 				
-				
+
+
+
+
 config = CustomConfig()
+config.display()                # Display model configuration
+
+standard_deviation = 5.0                         # Create upper limit for sigma so it can be optimized with optuna, added it as argument to MaskRCNN class (see also model.py)
 model = modellib.MaskRCNN(mode="training", config=config,
-                                  model_dir=DEFAULT_LOGS_DIR)
+                                  model_dir=DEFAULT_LOGS_DIR, set_st_dev = standard_deviation )
+
 
 weights_path = COCO_WEIGHTS_PATH
         # Download weights file
@@ -200,5 +208,8 @@ if not os.path.exists(weights_path):
 model.load_weights(weights_path, by_name=True, exclude=[
             "mrcnn_class_logits", "mrcnn_bbox_fc",
             "mrcnn_bbox", "mrcnn_mask"])
+print('weights loaded, beginning to train')
 
-train(model)			
+
+train(model)
+print('Succesfully trained model')

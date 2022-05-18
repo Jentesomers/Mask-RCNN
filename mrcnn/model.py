@@ -274,7 +274,7 @@ class MaskRCNN(object):
     The actual Keras model is in the keras_model property.
     """
 
-    def __init__(self, mode, config, model_dir):
+    def __init__(self, mode, config, model_dir, set_st_dev):
         """
         mode: Either "training" or "inference"
         config: A Sub-class of the Config class
@@ -286,6 +286,7 @@ class MaskRCNN(object):
         self.model_dir = model_dir
         self.set_log_dir()
         self.keras_model = self.build(mode=mode, config=config)
+        self.set_st_dev = set_st_dev
 
     def build(self, mode, config):
         """Build Mask R-CNN architecture.
@@ -732,7 +733,7 @@ class MaskRCNN(object):
         train_dataset, val_dataset: Training and validation Dataset objects.
         learning_rate: The learning rate to train with
         epochs: Number of training epochs. Note that previous training epochs
-                are considered to be done alreay, so this actually determines
+                are considered to be done already, so this actually determines
                 the epochs to train in total rather than in this particaular
                 call.
         layers: Allows selecting wich layers to train. It can be:
@@ -761,6 +762,10 @@ class MaskRCNN(object):
             defined in the Dataset class.
         """
         assert self.mode == "training", "Create model in training mode."
+
+        # Add augmentation (Gaussian blur)
+        import imgaug
+        augmentation = imgaug.augmenters.GaussianBlur(sigma=(0.0, self.set_st_dev))
 
         # Pre-defined layer regular expressions
         layer_regex = {
