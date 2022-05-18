@@ -6,6 +6,7 @@ import numpy as np
 import skimage.draw
 import cv2
 from mrcnn.visualize import display_instances
+from mrcnn import visualize
 import matplotlib.pyplot as plt
 
 # Root directory of the project
@@ -177,6 +178,15 @@ def train(model):
     dataset_val.prepare()
 
     print('Both datasets have been prepared')
+
+    # Load and display random samples                           Better place would be after train(model), but training fails due to memory
+    image_ids = np.random.choice(dataset_train.image_ids, 4)
+    for image_id in image_ids:
+        image = dataset_train.load_image(image_id)
+        mask, class_ids = dataset_train.load_mask(image_id)
+        visualize.display_top_masks(image, mask, class_ids, dataset_train.class_names)
+    pause
+
     # *** This training schedule is an example. Update to your needs ***
     # Since we're using a very small dataset, and starting from
     # COCO trained weights, we don't need to train too long. Also,
