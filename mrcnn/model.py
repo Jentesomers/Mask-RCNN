@@ -157,32 +157,32 @@ def resnet_graph(input_image, architecture, stage5=False, train_bn=True):
         train_bn: Boolean. Train or freeze Batch Norm layers
     """
     assert architecture in ["resnet50", "resnet101"]
-    # Stage 1
+    # Stage 1   #delete train_bn parameter, we don't use batchnormalization
     x = layers.ZeroPadding2D((3, 3))(input_image)
     x = layers.Conv2D(64, (7, 7), strides=(2, 2), name='conv1', use_bias=True)(x)
 
     x = layers.Activation('relu')(x)
     C1 = x = layers.MaxPooling2D((3, 3), strides=(2, 2), padding="same")(x)
     # Stage 2
-    x = conv_block(x, 3, [64, 64, 256], stage=2, block='a', strides=(1, 1), train_bn=train_bn)
-    x = identity_block(x, 3, [64, 64, 256], stage=2, block='b', train_bn=train_bn)
-    C2 = x = identity_block(x, 3, [64, 64, 256], stage=2, block='c', train_bn=train_bn)
+    x = conv_block(x, 3, [64, 64, 256], stage=2, block='a', strides=(1, 1))
+    x = identity_block(x, 3, [64, 64, 256], stage=2, block='b')
+    C2 = x = identity_block(x, 3, [64, 64, 256], stage=2, block='c')
     # Stage 3
-    x = conv_block(x, 3, [128, 128, 512], stage=3, block='a', train_bn=train_bn)
-    x = identity_block(x, 3, [128, 128, 512], stage=3, block='b', train_bn=train_bn)
-    x = identity_block(x, 3, [128, 128, 512], stage=3, block='c', train_bn=train_bn)
-    C3 = x = identity_block(x, 3, [128, 128, 512], stage=3, block='d', train_bn=train_bn)
+    x = conv_block(x, 3, [128, 128, 512], stage=3, block='a')
+    x = identity_block(x, 3, [128, 128, 512], stage=3, block='b')
+    x = identity_block(x, 3, [128, 128, 512], stage=3, block='c')
+    C3 = x = identity_block(x, 3, [128, 128, 512], stage=3, block='d')
     # Stage 4
-    x = conv_block(x, 3, [256, 256, 1024], stage=4, block='a', train_bn=train_bn)
+    x = conv_block(x, 3, [256, 256, 1024], stage=4, block='a')
     block_count = {"resnet50": 5, "resnet101": 22}[architecture]
     for i in range(block_count):
-        x = identity_block(x, 3, [256, 256, 1024], stage=4, block=chr(98 + i), train_bn=train_bn)
+        x = identity_block(x, 3, [256, 256, 1024], stage=4, block=chr(98 + i))
     C4 = x
     # Stage 5
     if stage5:
-        x = conv_block(x, 3, [512, 512, 2048], stage=5, block='a', train_bn=train_bn)
-        x = identity_block(x, 3, [512, 512, 2048], stage=5, block='b', train_bn=train_bn)
-        C5 = x = identity_block(x, 3, [512, 512, 2048], stage=5, block='c', train_bn=train_bn)
+        x = conv_block(x, 3, [512, 512, 2048], stage=5, block='a' )
+        x = identity_block(x, 3, [512, 512, 2048], stage=5, block='b' )
+        C5 = x = identity_block(x, 3, [512, 512, 2048], stage=5, block='c')
     else:
         C5 = None
     return [C1, C2, C3, C4, C5]

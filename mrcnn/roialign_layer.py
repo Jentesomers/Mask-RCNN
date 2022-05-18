@@ -15,7 +15,7 @@ import tensorflow.keras.models as models
 from mrcnn.data_generator_and_formatting import parse_image_meta, parse_image_meta_graph
 
 
-import utils
+from mrcnn import utils
 
 ############################################################
 #  ROIAlign Layer
