@@ -12,9 +12,9 @@ import tensorflow.keras.layers as layers
 #import tensorflow.keras.utils as utils         #Avoid double use of utils  ==> use keras.utils
 from tensorflow.python.eager import context
 import tensorflow.keras.models as models
-from model import compute_backbone_shapes
+from mrcnn.model import compute_backbone_shapes
 
-import utils
+from mrcnn import utils
 
 ############################################################
 #  Data Generator

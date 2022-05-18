@@ -12,7 +12,7 @@ import tensorflow.keras.layers as layers
 #import tensorflow.keras.utils as utils         #Avoid double use of utils  ==> use keras.utils
 from tensorflow.python.eager import context
 import tensorflow.keras.models as models
-from roialign_layer import PyramidROIAlign
+from mrcnn.roialign_layer import PyramidROIAlign
 
 #import utils
 ############################################################
@@ -131,4 +131,3 @@ def build_fpn_mask_graph(rois, feature_maps, image_meta,
 
 
 
-print('DONE!!')

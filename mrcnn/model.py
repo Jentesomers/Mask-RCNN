@@ -21,14 +21,14 @@ import tensorflow.keras.layers as layers
 #import tensorflow.keras.utils as utils     #Avoid double use of utils  ==> use keras.utils
 from tensorflow.python.eager import context
 import tensorflow.keras.models as models
-from proposal_layer import ProposalLayer
-from detection_target_layer import DetectionTargetLayer
+from mrcnn.proposal_layer import ProposalLayer
+from mrcnn.detection_target_layer import DetectionTargetLayer
 
 
-from loss_functions import rpn_class_loss_graph, rpn_bbox_loss_graph, mrcnn_class_loss_graph, mrcnn_bbox_loss_graph, mrcnn_mask_loss_graph
+from mrcnn.loss_functions import rpn_class_loss_graph, rpn_bbox_loss_graph, mrcnn_class_loss_graph, mrcnn_bbox_loss_graph, mrcnn_mask_loss_graph
 
 
-from miscellenous_graph_functions import norm_boxes_graph
+from mrcnn.miscellenous_graph_functions import norm_boxes_graph
 
 
 
@@ -36,7 +36,7 @@ from miscellenous_graph_functions import norm_boxes_graph
 import logging as log
 log.basicConfig(level=log.DEBUG)        #Set level to debug
 
-import utils
+from mrcnn import utils
 
 
 # Requires TensorFlow 2.0+
@@ -427,7 +427,7 @@ class MaskRCNN(object):
         if mode == "training":
             # Class ID mask to mark class IDs supported by the dataset the image
             # came from.
-            from data_generator_and_formatting import parse_image_meta_graph
+            from mrcnn.data_generator_and_formatting import parse_image_meta_graph
             active_class_ids = layers.Lambda(
                 lambda x: parse_image_meta_graph(x)["active_class_ids"]
                 )(input_image_meta)
@@ -452,7 +452,7 @@ class MaskRCNN(object):
 
             # Network Heads
             # TODO: verify that this handles zero padded ROIs
-            from feature_pyramid_network_heads import fpn_classifier_graph, build_fpn_mask_graph
+            from mrcnn.feature_pyramid_network_heads import fpn_classifier_graph, build_fpn_mask_graph
             mrcnn_class_logits, mrcnn_class, mrcnn_bbox =\
                 fpn_classifier_graph(rois, mrcnn_feature_maps, input_image_meta,
                                      config.POOL_SIZE, config.NUM_CLASSES,
@@ -1169,6 +1169,7 @@ class MaskRCNN(object):
         for k, v in outputs_np.items():
             log.debug(k, v)
         return outputs_np
+
 
 
 

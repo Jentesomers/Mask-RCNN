@@ -9,12 +9,13 @@ from mrcnn.visualize import display_instances
 import matplotlib.pyplot as plt
 
 # Root directory of the project
-ROOT_DIR = "D:\\env_with_tensorflow1.14\\all_maskrcnn\\maskrcnn_truck_car"
+ROOT_DIR = r"C:\Users\jente\OneDrive\Documenten\GitHub\Mask-RCNN"
 
 # Import Mask RCNN
 sys.path.append(ROOT_DIR)  # To find local version of the library
 from mrcnn.config import Config
 from mrcnn import model as modellib, utils
+
 
 # Path to trained weights file
 COCO_WEIGHTS_PATH = os.path.join(ROOT_DIR, "mask_rcnn_coco.h5")
@@ -37,7 +38,7 @@ class CustomConfig(Config):
     IMAGES_PER_GPU = 2
 
     # Number of classes (including background)
-    NUM_CLASSES = 1 + 2  # Background + car and truck
+    NUM_CLASSES = 1 + 3  # Background + beer, foam and foam_beer
 
     # Number of training steps per epoch
     STEPS_PER_EPOCH = 10
@@ -56,18 +57,20 @@ class CustomDataset(utils.Dataset):
         dataset_dir: Root directory of the dataset.
         subset: Subset to load: train or val
         """
-        # Add classes. We have only one class to add.
-        self.add_class("object", 1, "Car")
-        self.add_class("object", 2, "Truck")
+        # Add classes. We have only 3 classes to add.
+        self.add_class("object", 1, "beer")
+        self.add_class("object", 2, "foam")
+        self.add_class("object", 3, "foam_beer")
 
         # Train or validation dataset?
         assert subset in ["train", "val"]
         dataset_dir = os.path.join(dataset_dir, subset)
 
         # We mostly care about the x and y coordinates of each region
-        annotations1 = json.load(open('D:\\env_with_tensorflow1.14\\all_maskrcnn\\maskrcnn_truck_car\\Dataset\\train\\train_json.json'))
+        annotations1 = json.load(open(r"C:\Users\jente\OneDrive\Documenten\GitHub\Mask-RCNN\Dataset\train\train_json.json"))
         # print(annotations1)
         annotations = list(annotations1.values())  # don't need the dict keys
+
 
         # The VIA tool saves images in the JSON even if they don't have any
         # annotations. Skip unannotated images.
@@ -81,8 +84,8 @@ class CustomDataset(utils.Dataset):
             # shape_attributes (see json format above)
             polygons = [r['shape_attributes'] for r in a['regions']] 
             objects = [s['region_attributes']['names'] for s in a['regions']]
-            print("objects:",objects)
-            name_dict = {"Car": 1,"Truck": 2}
+            print("objects:", objects)
+            name_dict = {"beer": 1, "foam": 2, "foam_beer": 3}
 
             # key = tuple(name_dict)
             num_ids = [name_dict[a] for a in objects]
@@ -149,12 +152,12 @@ def train(model):
     """Train the model."""
     # Training dataset.
     dataset_train = CustomDataset()
-    dataset_train.load_custom("D:\\env_with_tensorflow1.14\\all_maskrcnn\\maskrcnn_truck_car\\Dataset", "train")
+    dataset_train.load_custom(r"C:\Users\jente\OneDrive\Documenten\GitHub\Mask-RCNN\Dataset", "train")
     dataset_train.prepare()
 
     # Validation dataset
     dataset_val = CustomDataset()
-    dataset_val.load_custom("D:\\env_with_tensorflow1.14\\all_maskrcnn\\maskrcnn_truck_car\\Dataset", "val")
+    dataset_val.load_custom(r"C:\Users\jente\OneDrive\Documenten\GitHub\Mask-RCNN\Dataset", "val")
     dataset_val.prepare()
 
     # *** This training schedule is an example. Update to your needs ***

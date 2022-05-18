@@ -13,7 +13,7 @@ import tensorflow.keras.utils as utils
 from tensorflow.python.eager import context
 import tensorflow.keras.models as models
 
-import utils
+from mrcnn import utils
 
 
 ############################################################

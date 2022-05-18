@@ -25,7 +25,7 @@ class Config(object):
     NAME = None  # Override in sub-classes
 
     # NUMBER OF GPUs to use. When using only a CPU, this needs to be set to 1.
-    GPU_COUNT = 1
+    GPU_COUNT = 2
 
     # Number of images to train with on each GPU. A 12GB GPU can typically
     # handle 2 images of 1024x1024px.
@@ -205,7 +205,7 @@ class Config(object):
     #     None: Train BN layers. This is the normal mode
     #     False: Freeze BN layers. Good when using a small batch size
     #     True: (don't use). Set layer in training mode even when predicting
-    #TRAIN_BN = False  # Defaulting to False since batch size is often small #Batch normalization was removed
+    TRAIN_BN = False  # Defaulting to False since batch size is often small #Batch normalization was removed
 
     # Gradient norm clipping
     GRADIENT_CLIP_NORM = 5.0

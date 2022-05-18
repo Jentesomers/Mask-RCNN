@@ -9,13 +9,13 @@ import tensorflow as tf
 import tensorflow.keras as keras
 import tensorflow.keras.backend as backend
 import tensorflow.keras.layers as layers
-import tensorflow.keras.utils as utils
+#import tensorflow.keras.utils as utils #use keras.utils instead to avoid double use of utils
 from tensorflow.python.eager import context
 import tensorflow.keras.models as models
-from miscellenous_graph_functions import trim_zeros_graph
+from mrcnn.miscellenous_graph_functions import trim_zeros_graph
 
 
-import utils
+from mrcnn import utils
 
 
 ############################################################
