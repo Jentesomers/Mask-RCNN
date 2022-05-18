@@ -34,7 +34,7 @@ from mrcnn.miscellenous_graph_functions import norm_boxes_graph
 
 
 import logging as log
-log.basicConfig(level=log.DEBUG)        #Set level to debug
+log.basicConfig(level=log.INFO)        #Set level to debug
 
 from mrcnn import utils
 
@@ -777,7 +777,7 @@ class MaskRCNN(object):
             layers = layer_regex[layers]
 
         # Data generators
-        from data_generator_and_formatting import DataGenerator
+        from mrcnn.data_generator_and_formatting import DataGenerator
         train_generator = DataGenerator(train_dataset, self.config, shuffle=True,
                                          augmentation=augmentation)
         val_generator = DataGenerator(val_dataset, self.config, shuffle=True)

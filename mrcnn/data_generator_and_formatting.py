@@ -40,6 +40,8 @@ def load_image_gt(dataset, config, image_id, augmentation=None):
     image = dataset.load_image(image_id)
     mask, class_ids = dataset.load_mask(image_id)
     original_shape = image.shape
+    print(f'Size of class ids: {class_ids.shape}')
+    print(f'The original image shape is {original_shape}')
     image, window, scale, padding, crop = utils.resize_image(
         image,
         min_dim=config.IMAGE_MIN_DIM,
@@ -81,9 +83,10 @@ def load_image_gt(dataset, config, image_id, augmentation=None):
 
     # Note that some boxes might be all zeros if the corresponding mask got cropped out.
     # and here is to filter them out
-    _idx = np.sum(mask, axis=(0, 1)) > 0
-    mask = mask[:, :, _idx]
-    class_ids = class_ids[_idx]
+    idxx = np.sum(mask, axis=(0, 1)) > 0
+    mask = mask[:, :, idxx]
+    print(class_ids)
+    class_ids = class_ids[idxx]
     # Bounding boxes. Note that some boxes might be all zeros
     # if the corresponding mask got cropped out.
     # bbox: [num_instances, (y1, x1, y2, x2)]
