@@ -185,7 +185,7 @@ def train(model):
         image = dataset_train.load_image(image_id)
         mask, class_ids = dataset_train.load_mask(image_id)
         visualize.display_top_masks(image, mask, class_ids, dataset_train.class_names)
-    pause
+
 
     # *** This training schedule is an example. Update to your needs ***
     # Since we're using a very small dataset, and starting from
@@ -205,9 +205,9 @@ def train(model):
 config = CustomConfig()
 config.display()                # Display model configuration
 
-standard_deviation = 5.0                         # Create upper limit for sigma so it can be optimized with optuna, added it as argument to MaskRCNN class (see also model.py)
+standard_deviation = 5.0                         # Create upper limit for standard deviation so it can be optimized with optuna, added it as argument to MaskRCNN class (see also model.py)
 model = modellib.MaskRCNN(mode="training", config=config,
-                                  model_dir=DEFAULT_LOGS_DIR, set_st_dev = standard_deviation )
+                                  model_dir=DEFAULT_LOGS_DIR, s = standard_deviation )
 
 
 weights_path = COCO_WEIGHTS_PATH

@@ -20,7 +20,7 @@ from mrcnn import utils
 #  Data Generator
 ############################################################
 
-def load_image_gt(dataset, config, image_id, augmentation=None):
+def load_image_gt(dataset, config, image_id, augmentation):             #augmentation has been set to Gaussian noise in line 787 in model.py for training set
     """Load and return ground truth data for an image (image, mask, bounding boxes).
 
     augmentation: Optional. An imgaug (https://github.com/aleju/imgaug) augmentation.
@@ -40,8 +40,8 @@ def load_image_gt(dataset, config, image_id, augmentation=None):
     image = dataset.load_image(image_id)
     mask, class_ids = dataset.load_mask(image_id)
     original_shape = image.shape
-    print(f'Size of class ids: {class_ids.shape}')
-    print(f'The original image shape is {original_shape}')
+    #print(f'Size of class ids: {class_ids.shape}')
+    #print(f'The original image shape is {original_shape}')
     image, window, scale, padding, crop = utils.resize_image(
         image,
         min_dim=config.IMAGE_MIN_DIM,
@@ -64,6 +64,7 @@ def load_image_gt(dataset, config, image_id, augmentation=None):
 
         def hook(images, augmenter, parents, default):
             """Determines which augmenters to apply to masks."""
+            #print(f'augmentor used: {augmenter.__class__.__name__ in MASK_AUGMENTERS}')        #Gives False since Gaussian noise isn't in MASK_AUGMENTERS
             return augmenter.__class__.__name__ in MASK_AUGMENTERS
 
         # Store shapes before augmentation to compare
@@ -73,8 +74,8 @@ def load_image_gt(dataset, config, image_id, augmentation=None):
         det = augmentation.to_deterministic()
         image = det.augment_image(image)
         # Change mask to np.uint8 because imgaug doesn't support np.bool
-        mask = det.augment_image(mask.astype(np.uint8),
-                                 hooks=imgaug.HooksImages(activator=hook))
+        #mask = det.augment_image(mask.astype(np.uint8),                        #Don't add noise on the mask
+        #                         hooks=imgaug.HooksImages(activator=hook))
         # Verify that shapes didn't change
         assert image.shape == image_shape, "Augmentation shouldn't change image size"
         assert mask.shape == mask_shape, "Augmentation shouldn't change mask size"
@@ -527,8 +528,8 @@ class DataGenerator(keras.utils.Sequence):
             image_id = self.image_ids[image_index]
             image, image_meta, gt_class_ids, gt_boxes, gt_masks = \
                 load_image_gt(self.dataset, self.config, image_id,
-                              augmentation=self.augmentation)
-
+                              augmentation=self.augmentation)           # In model.py augmentation has been set to Gaussion noise for the train set and still none for val set
+            print(f'Augmentation used = {self.augmentation}')
             # Skip images that have no instances. This can happen in cases
             # where we train on a subset of classes and the image doesn't
             # have any of the classes we care about.
