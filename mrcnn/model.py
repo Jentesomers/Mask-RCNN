@@ -302,7 +302,7 @@ class MaskRCNN(object):
             raise Exception("Image size must be dividable by 2 at least 6 times "
                             "to avoid fractions when downscaling and upscaling."
                             "For example, use 256, 320, 384, 448, 512, ... etc. ")
-        print('is there resizing issues?')
+        #print('is there resizing issues?')
 
         # Inputs
         input_image = layers.Input(
@@ -767,7 +767,7 @@ class MaskRCNN(object):
         # Add augmentation (Gaussian noise)
         import imgaug
         augmentation = imgaug.augmenters.AdditiveGaussianNoise(scale=(0, self.s*255))      #Change Gaussian blur to noise, adds noise sampled from gaussian distributions elementwise to images.
-                                                                                           
+
         # Pre-defined layer regular expressions
         layer_regex = {
             # all layers but the backbone
@@ -786,7 +786,7 @@ class MaskRCNN(object):
         from mrcnn.data_generator_and_formatting import DataGenerator
         train_generator = DataGenerator(train_dataset, self.config, shuffle=True,
                                          augmentation=augmentation)     # augmentation has been set to Gaussian noise
-        val_generator = DataGenerator(val_dataset, self.config, shuffle=True)       # No augmentation for val set, is set to none in __init__ DataGenerator()
+        val_generator = DataGenerator(val_dataset, self.config, shuffle=True, augmentation=None)       # No augmentation for val set, is set to none in __init__ DataGenerator()
 
         # Create log_dir if it does not exist
         if not os.path.exists(self.log_dir):

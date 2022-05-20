@@ -8,6 +8,10 @@ import cv2
 from mrcnn.visualize import display_instances
 from mrcnn import visualize
 import matplotlib.pyplot as plt
+from tensorflow.python.keras.callbacks import TensorBoard
+from time import time
+import tensorflow as tf
+
 
 # Root directory of the project
 ROOT_DIR = r"C:\Users\jente\OneDrive\Documenten\GitHub\Mask-RCNN"
@@ -165,7 +169,37 @@ class CustomDataset(utils.Dataset):
         else:
             super(self.__class__, self).image_reference(image_id)
 
-def train(model):
+
+
+
+
+#Optimize with optuna:
+import optuna
+
+def objective(trial):
+    config = CustomConfig()
+    config.display()  # Display model configuration
+
+    standard_deviation = trial.suggest_float('standard_deviation', 1e-5, 0.5,
+                                             log=True)  # Create upper limit for standard deviation of the Gaussian noise added to the images so it can be optimized with optuna, added it as argument to MaskRCNN class (see also model.py)
+    model = modellib.MaskRCNN(mode="training", config=config,
+                              model_dir=DEFAULT_LOGS_DIR, s=standard_deviation)
+
+    tensorboard = TensorBoard(log_dir="logs/train".format(
+        time()))  # open Anaconda Prompt and write tensorboard --logdir=logs/train to visualize
+    callback = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=3)
+
+    weights_path = COCO_WEIGHTS_PATH
+    # Download weights file
+    if not os.path.exists(weights_path):
+        utils.download_trained_weights(weights_path)
+
+    model.load_weights(weights_path, by_name=True, exclude=[
+        "mrcnn_class_logits", "mrcnn_bbox_fc",
+        "mrcnn_bbox", "mrcnn_mask"])
+    print('weights loaded, beginning to train')
+
+
     """Train the model."""
     # Training dataset.
     dataset_train = CustomDataset()
@@ -186,40 +220,85 @@ def train(model):
         mask, class_ids = dataset_train.load_mask(image_id)
         visualize.display_top_masks(image, mask, class_ids, dataset_train.class_names)
 
+    # Do training in two stages, first only train weights of top layers, then do fine tuning by training all layers with a lower learning rate
+    print("Training network heads..")
 
-    # *** This training schedule is an example. Update to your needs ***
-    # Since we're using a very small dataset, and starting from
-    # COCO trained weights, we don't need to train too long. Also,
-    # no need to train all layers, just the heads should do it.
-    print("Training network heads")
+
+    # make parameter for the hyper parameters to optimize with optuna
+    epoch = trial.suggest_int('epoch', 5, 35, log=True)
+    lr = trial.suggest_float('lr', 1e-5, 1e-1, log=True)
     model.train(dataset_train, dataset_val,
-                learning_rate=config.LEARNING_RATE,
-                epochs=20,
+                learning_rate=lr,
+                # Set lr as a parameter to be optimized with optuna (no longer taken from config.py)
+                custom_callbacks=[tensorboard, callback],  # Add custom callback (in def train() in model.py) for tensorboard and early stopping
+                epochs=epoch,
                 layers='heads')
-			
-				
+
+    # Optional, fine tune the network
+    print("Fine tuning network..")
+    model.train(dataset_train, dataset_val,
+                learning_rate=lr / 10,
+                custom_callbacks=[tensorboard, callback],  # Add custom callback (in def train() in model.py) for tensorboard and early stopping
+                epochs=epoch,
+                layers="all")
 
 
 
+    # Evaluation on test set
+    class InferenceConfig(ShapesConfig):        # Opportunity to overrite configurations
+        GPU_COUNT = 1
+        IMAGES_PER_GPU = 1
 
-config = CustomConfig()
-config.display()                # Display model configuration
+    inference_config = InferenceConfig()
 
-standard_deviation = 5.0                         # Create upper limit for standard deviation so it can be optimized with optuna, added it as argument to MaskRCNN class (see also model.py)
-model = modellib.MaskRCNN(mode="training", config=config,
-                                  model_dir=DEFAULT_LOGS_DIR, s = standard_deviation )
+    # Recreate the model in inference mode
+    model = modellib.MaskRCNN(mode="inference",
+                              config=inference_config,
+                              model_dir=DEFAULT_LOGS_DIR, s=0)  #Set standard deviation for gaussian noise to zero so no augmention will be performed when calling the function load_img_gt
+
+    # Get path to saved weights
+    # Either set a specific path or find last trained weights
+    # model_path = os.path.join(ROOT_DIR, ".h5 file name here")
+    model_path = model.find_last()
+
+    # Load trained weights
+    print("Loading weights from ", model_path)
+    model.load_weights(model_path, by_name=True)
+
+    # Compute VOC-Style mAP @ IoU=0.5
+    # Running on test set
+
+    #load test set
+    # Validation dataset
+    dataset_test = CustomDataset()
+    dataset_test.load_custom(r"C:\Users\jente\OneDrive\Documenten\GitHub\Mask-RCNN\Dataset", "test")        #Still need to put test set in dataset (and export annotations as json from VIA)
+    dataset_test.prepare()
+
+    test_image_ids = dataset_test.image_ids
+
+    # AP (Average precision) is a popular metric in measuring the accuracy of object detectors. IoU (Intersection over union) measures the overlap between 2 boundaries
+    APs = []
+    for image_id in test_image_ids:
+        # Load image and ground truth data
+        image, image_meta, gt_class_id, gt_bbox, gt_mask = \
+            modellib.load_image_gt(dataset_test, inference_config,
+                                   image_id)  # , use_mini_mask=False)
+        molded_images = np.expand_dims(modellib.mold_image(image, inference_config), 0)
+        # Run object detection
+        results = model.detect([image], verbose=0)
+        r = results[0]
+        # Compute AP
+        AP, precisions, recalls, overlaps = \
+            utils.compute_ap(gt_bbox, gt_class_id, gt_mask,
+                             r["rois"], r["class_ids"], r["scores"], r['masks'])
+        APs.append(AP)
+
+    meanAP = np.mean(APs)
+
+    print("mAP: ", meanAP)
+    return meanAP
 
 
-weights_path = COCO_WEIGHTS_PATH
-        # Download weights file
-if not os.path.exists(weights_path):
-  utils.download_trained_weights(weights_path)
-
-model.load_weights(weights_path, by_name=True, exclude=[
-            "mrcnn_class_logits", "mrcnn_bbox_fc",
-            "mrcnn_bbox", "mrcnn_mask"])
-print('weights loaded, beginning to train')
-
-
-train(model)
-print('Succesfully trained model')
+# 3. Create a study object and optimize the objective function.
+study = optuna.create_study(direction='maximize')
+study.optimize(objective, n_trials=10)

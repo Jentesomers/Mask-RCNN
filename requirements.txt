@@ -9,3 +9,5 @@ opencv-python
 h5py
 imgaug
 IPython[all]
+optuna
+tensorboard
