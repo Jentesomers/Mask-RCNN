@@ -68,7 +68,7 @@ class CustomDataset(utils.Dataset):
         self.add_class("object", 3, "foam_beer")
 
         # Train or validation dataset?
-        assert subset in ["train", "val"]
+        assert subset in ["train", "val","test"]
         dataset_dir = os.path.join(dataset_dir, subset)
 
         # We mostly care about the x and y coordinates of each region
