@@ -245,7 +245,7 @@ def objective(trial):
 
 
     # Evaluation on test set
-    class InferenceConfig(ShapesConfig):        # Opportunity to overrite configurations
+    class InferenceConfig(CustomConfig):        # Opportunity to overrite configurations
         GPU_COUNT = 1
         IMAGES_PER_GPU = 1
 
