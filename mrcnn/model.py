@@ -21,22 +21,22 @@ import tensorflow.keras.layers as layers
 #import tensorflow.keras.utils as utils     #Avoid double use of utils  ==> use keras.utils
 from tensorflow.python.eager import context
 import tensorflow.keras.models as models
-from proposal_layer import ProposalLayer
-from detection_target_layer import DetectionTargetLayer
+from mrcnn.proposal_layer import ProposalLayer
+from mrcnn.detection_target_layer import DetectionTargetLayer
 
 
-from loss_functions import rpn_class_loss_graph, rpn_bbox_loss_graph, mrcnn_class_loss_graph, mrcnn_bbox_loss_graph, mrcnn_mask_loss_graph
+from mrcnn.loss_functions import rpn_class_loss_graph, rpn_bbox_loss_graph, mrcnn_class_loss_graph, mrcnn_bbox_loss_graph, mrcnn_mask_loss_graph
 
 
-from miscellenous_graph_functions import norm_boxes_graph
+from mrcnn.miscellenous_graph_functions import norm_boxes_graph
 
 
 
 
 import logging as log
-log.basicConfig(level=log.DEBUG)        #Set level to debug
+log.basicConfig(level=log.INFO)        #Set level to debug
 
-import utils
+from mrcnn import utils
 
 
 # Requires TensorFlow 2.0+
@@ -157,32 +157,32 @@ def resnet_graph(input_image, architecture, stage5=False, train_bn=True):
         train_bn: Boolean. Train or freeze Batch Norm layers
     """
     assert architecture in ["resnet50", "resnet101"]
-    # Stage 1
+    # Stage 1   #delete train_bn parameter, we don't use batchnormalization
     x = layers.ZeroPadding2D((3, 3))(input_image)
     x = layers.Conv2D(64, (7, 7), strides=(2, 2), name='conv1', use_bias=True)(x)
 
     x = layers.Activation('relu')(x)
     C1 = x = layers.MaxPooling2D((3, 3), strides=(2, 2), padding="same")(x)
     # Stage 2
-    x = conv_block(x, 3, [64, 64, 256], stage=2, block='a', strides=(1, 1), train_bn=train_bn)
-    x = identity_block(x, 3, [64, 64, 256], stage=2, block='b', train_bn=train_bn)
-    C2 = x = identity_block(x, 3, [64, 64, 256], stage=2, block='c', train_bn=train_bn)
+    x = conv_block(x, 3, [64, 64, 256], stage=2, block='a', strides=(1, 1))
+    x = identity_block(x, 3, [64, 64, 256], stage=2, block='b')
+    C2 = x = identity_block(x, 3, [64, 64, 256], stage=2, block='c')
     # Stage 3
-    x = conv_block(x, 3, [128, 128, 512], stage=3, block='a', train_bn=train_bn)
-    x = identity_block(x, 3, [128, 128, 512], stage=3, block='b', train_bn=train_bn)
-    x = identity_block(x, 3, [128, 128, 512], stage=3, block='c', train_bn=train_bn)
-    C3 = x = identity_block(x, 3, [128, 128, 512], stage=3, block='d', train_bn=train_bn)
+    x = conv_block(x, 3, [128, 128, 512], stage=3, block='a')
+    x = identity_block(x, 3, [128, 128, 512], stage=3, block='b')
+    x = identity_block(x, 3, [128, 128, 512], stage=3, block='c')
+    C3 = x = identity_block(x, 3, [128, 128, 512], stage=3, block='d')
     # Stage 4
-    x = conv_block(x, 3, [256, 256, 1024], stage=4, block='a', train_bn=train_bn)
+    x = conv_block(x, 3, [256, 256, 1024], stage=4, block='a')
     block_count = {"resnet50": 5, "resnet101": 22}[architecture]
     for i in range(block_count):
-        x = identity_block(x, 3, [256, 256, 1024], stage=4, block=chr(98 + i), train_bn=train_bn)
+        x = identity_block(x, 3, [256, 256, 1024], stage=4, block=chr(98 + i))
     C4 = x
     # Stage 5
     if stage5:
-        x = conv_block(x, 3, [512, 512, 2048], stage=5, block='a', train_bn=train_bn)
-        x = identity_block(x, 3, [512, 512, 2048], stage=5, block='b', train_bn=train_bn)
-        C5 = x = identity_block(x, 3, [512, 512, 2048], stage=5, block='c', train_bn=train_bn)
+        x = conv_block(x, 3, [512, 512, 2048], stage=5, block='a' )
+        x = identity_block(x, 3, [512, 512, 2048], stage=5, block='b' )
+        C5 = x = identity_block(x, 3, [512, 512, 2048], stage=5, block='c')
     else:
         C5 = None
     return [C1, C2, C3, C4, C5]
@@ -274,7 +274,7 @@ class MaskRCNN(object):
     The actual Keras model is in the keras_model property.
     """
 
-    def __init__(self, mode, config, model_dir):
+    def __init__(self, mode, config, model_dir, s):
         """
         mode: Either "training" or "inference"
         config: A Sub-class of the Config class
@@ -286,6 +286,7 @@ class MaskRCNN(object):
         self.model_dir = model_dir
         self.set_log_dir()
         self.keras_model = self.build(mode=mode, config=config)
+        self.s = s
 
     def build(self, mode, config):
         """Build Mask R-CNN architecture.
@@ -301,6 +302,7 @@ class MaskRCNN(object):
             raise Exception("Image size must be dividable by 2 at least 6 times "
                             "to avoid fractions when downscaling and upscaling."
                             "For example, use 256, 320, 384, 448, 512, ... etc. ")
+        #print('is there resizing issues?')
 
         # Inputs
         input_image = layers.Input(
@@ -427,7 +429,7 @@ class MaskRCNN(object):
         if mode == "training":
             # Class ID mask to mark class IDs supported by the dataset the image
             # came from.
-            from data_generator_and_formatting import parse_image_meta_graph
+            from mrcnn.data_generator_and_formatting import parse_image_meta_graph
             active_class_ids = layers.Lambda(
                 lambda x: parse_image_meta_graph(x)["active_class_ids"]
                 )(input_image_meta)
@@ -452,7 +454,7 @@ class MaskRCNN(object):
 
             # Network Heads
             # TODO: verify that this handles zero padded ROIs
-            from feature_pyramid_network_heads import fpn_classifier_graph, build_fpn_mask_graph
+            from mrcnn.feature_pyramid_network_heads import fpn_classifier_graph, build_fpn_mask_graph
             mrcnn_class_logits, mrcnn_class, mrcnn_bbox =\
                 fpn_classifier_graph(rois, mrcnn_feature_maps, input_image_meta,
                                      config.POOL_SIZE, config.NUM_CLASSES,
@@ -502,7 +504,7 @@ class MaskRCNN(object):
             # Detections
             # output is [batch, num_detections, (y1, x1, y2, x2, class_id, score)] in
             # normalized coordinates
-            from detection_layer import DetectionLayer
+            from mrcnn.detection_layer import DetectionLayer
             detections = DetectionLayer(config, name="mrcnn_detection")(
                 [rpn_rois, mrcnn_class, mrcnn_bbox, input_image_meta])
 
@@ -732,7 +734,7 @@ class MaskRCNN(object):
         train_dataset, val_dataset: Training and validation Dataset objects.
         learning_rate: The learning rate to train with
         epochs: Number of training epochs. Note that previous training epochs
-                are considered to be done alreay, so this actually determines
+                are considered to be done already, so this actually determines
                 the epochs to train in total rather than in this particaular
                 call.
         layers: Allows selecting wich layers to train. It can be:
@@ -762,6 +764,10 @@ class MaskRCNN(object):
         """
         assert self.mode == "training", "Create model in training mode."
 
+        # Add augmentation (Gaussian noise)
+        import imgaug
+        augmentation = imgaug.augmenters.AdditiveGaussianNoise(scale=(0, self.s*255))      #Change Gaussian blur to noise, adds noise sampled from gaussian distributions elementwise to images.
+
         # Pre-defined layer regular expressions
         layer_regex = {
             # all layers but the backbone
@@ -777,10 +783,10 @@ class MaskRCNN(object):
             layers = layer_regex[layers]
 
         # Data generators
-        from data_generator_and_formatting import DataGenerator
+        from mrcnn.data_generator_and_formatting import DataGenerator
         train_generator = DataGenerator(train_dataset, self.config, shuffle=True,
-                                         augmentation=augmentation)
-        val_generator = DataGenerator(val_dataset, self.config, shuffle=True)
+                                         augmentation=augmentation)     # augmentation has been set to Gaussian noise
+        val_generator = DataGenerator(val_dataset, self.config, shuffle=True, augmentation=None)       # No augmentation for val set, is set to none in __init__ DataGenerator()
 
         # Create log_dir if it does not exist
         if not os.path.exists(self.log_dir):
@@ -1169,6 +1175,7 @@ class MaskRCNN(object):
         for k, v in outputs_np.items():
             log.debug(k, v)
         return outputs_np
+
 
 
 

@@ -12,10 +12,10 @@ import tensorflow.keras.layers as layers
 import tensorflow.keras.utils as utils
 from tensorflow.python.eager import context
 import tensorflow.keras.models as models
-from data_generator_and_formatting import parse_image_meta, parse_image_meta_graph
+from mrcnn.data_generator_and_formatting import parse_image_meta, parse_image_meta_graph
 
 
-import utils
+from mrcnn import utils
 
 ############################################################
 #  ROIAlign Layer

@@ -31,7 +31,7 @@ class Config(object):
     # handle 2 images of 1024x1024px.
     # Adjust based on your GPU memory and image sizes. Use the highest
     # number that your GPU can handle for best performance.
-    IMAGES_PER_GPU = 2
+    IMAGES_PER_GPU = 1
 
     # Number of training steps per epoch
     # This doesn't need to match the size of the training set. Tensorboard
@@ -205,7 +205,7 @@ class Config(object):
     #     None: Train BN layers. This is the normal mode
     #     False: Freeze BN layers. Good when using a small batch size
     #     True: (don't use). Set layer in training mode even when predicting
-    #TRAIN_BN = False  # Defaulting to False since batch size is often small #Batch normalization was removed
+    TRAIN_BN = False  # Defaulting to False since batch size is often small #Batch normalization was removed
 
     # Gradient norm clipping
     GRADIENT_CLIP_NORM = 5.0

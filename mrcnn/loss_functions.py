@@ -12,7 +12,7 @@ import tensorflow.keras.layers as layers
 #import tensorflow.keras.utils as utils         #Avoid double use of utils  ==> use keras.utils
 from tensorflow.python.eager import context
 import tensorflow.keras.models as models
-from miscellenous_graph_functions import batch_pack_graph
+from mrcnn.miscellenous_graph_functions import batch_pack_graph
 
 #from mrcnn import utils
 

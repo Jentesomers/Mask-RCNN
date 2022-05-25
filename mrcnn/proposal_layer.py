@@ -9,11 +9,11 @@ import tensorflow as tf
 import tensorflow.keras as keras
 import tensorflow.keras.backend as backend
 import tensorflow.keras.layers as layers
-import tensorflow.keras.utils as utils
+#import tensorflow.keras.utils as utils     # Use function defined in mrcnn
 from tensorflow.python.eager import context
 import tensorflow.keras.models as models
 
-import utils
+from mrcnn import utils
 
 
 ############################################################

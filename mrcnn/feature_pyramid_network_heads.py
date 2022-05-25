@@ -12,7 +12,7 @@ import tensorflow.keras.layers as layers
 #import tensorflow.keras.utils as utils         #Avoid double use of utils  ==> use keras.utils
 from tensorflow.python.eager import context
 import tensorflow.keras.models as models
-from roialign_layer import PyramidROIAlign
+from mrcnn.roialign_layer import PyramidROIAlign
 
 #import utils
 ############################################################
@@ -41,6 +41,7 @@ def fpn_classifier_graph(rois, feature_maps, image_meta,
         bbox_deltas: [batch, num_rois, NUM_CLASSES, (dy, dx, log(dh), log(dw))] Deltas to apply to
                      proposal boxes
     """
+    # Delete all x = layers.TimeDistributed(BatchNorm(), ..) since we don't use BatchNormalization
     # ROI Pooling
     # Shape: [batch, num_rois, POOL_SIZE, POOL_SIZE, channels]
     x = PyramidROIAlign([pool_size, pool_size],
@@ -48,11 +49,9 @@ def fpn_classifier_graph(rois, feature_maps, image_meta,
     # Two 1024 FC layers (implemented with Conv2D for consistency)
     x = layers.TimeDistributed(layers.Conv2D(fc_layers_size, (pool_size, pool_size), padding="valid"),
                                name="mrcnn_class_conv1")(x)
-    x = layers.TimeDistributed(BatchNorm(), name='mrcnn_class_bn1')(x, training=train_bn)
     x = layers.Activation('relu')(x)
     x = layers.TimeDistributed(layers.Conv2D(fc_layers_size, (1, 1)),
                                name="mrcnn_class_conv2")(x)
-    x = layers.TimeDistributed(BatchNorm(), name='mrcnn_class_bn2')(x, training=train_bn)
     x = layers.Activation('relu')(x)
 
     shared = layers.Lambda(lambda x: backend.squeeze(backend.squeeze(x, 3), 2),
@@ -93,6 +92,7 @@ def build_fpn_mask_graph(rois, feature_maps, image_meta,
 
     Returns: Masks [batch, num_rois, MASK_POOL_SIZE, MASK_POOL_SIZE, NUM_CLASSES]
     """
+    # Delete all x = layers.TimeDistributed(BatchNorm(), ..) since we don't use BatchNormalization
     # ROI Pooling
     # Shape: [batch, num_rois, MASK_POOL_SIZE, MASK_POOL_SIZE, channels]
     x = PyramidROIAlign([pool_size, pool_size],
@@ -101,26 +101,22 @@ def build_fpn_mask_graph(rois, feature_maps, image_meta,
     # Conv layers
     x = layers.TimeDistributed(layers.Conv2D(256, (3, 3), padding="same"),
                                name="mrcnn_mask_conv1")(x)
-    x = layers.TimeDistributed(BatchNorm(),
-                               name='mrcnn_mask_bn1')(x, training=train_bn)
+
     x = layers.Activation('relu')(x)
 
     x = layers.TimeDistributed(layers.Conv2D(256, (3, 3), padding="same"),
                                name="mrcnn_mask_conv2")(x)
-    x = layers.TimeDistributed(BatchNorm(),
-                               name='mrcnn_mask_bn2')(x, training=train_bn)
+
     x = layers.Activation('relu')(x)
 
     x = layers.TimeDistributed(layers.Conv2D(256, (3, 3), padding="same"),
                                name="mrcnn_mask_conv3")(x)
-    x = layers.TimeDistributed(BatchNorm(),
-                               name='mrcnn_mask_bn3')(x, training=train_bn)
+
     x = layers.Activation('relu')(x)
 
     x = layers.TimeDistributed(layers.Conv2D(256, (3, 3), padding="same"),
                                name="mrcnn_mask_conv4")(x)
-    x = layers.TimeDistributed(BatchNorm(),
-                               name='mrcnn_mask_bn4')(x, training=train_bn)
+
     x = layers.Activation('relu')(x)
 
     x = layers.TimeDistributed(layers.Conv2DTranspose(256, (2, 2), strides=2, activation="relu"),
@@ -131,4 +127,3 @@ def build_fpn_mask_graph(rois, feature_maps, image_meta,
 
 
 
-print('DONE!!')
