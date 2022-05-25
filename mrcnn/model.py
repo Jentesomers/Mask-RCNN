@@ -25,6 +25,7 @@ from mrcnn.proposal_layer import ProposalLayer
 from mrcnn.detection_target_layer import DetectionTargetLayer
 
 
+
 from mrcnn.loss_functions import rpn_class_loss_graph, rpn_bbox_loss_graph, mrcnn_class_loss_graph, mrcnn_bbox_loss_graph, mrcnn_mask_loss_graph
 
 
@@ -274,7 +275,7 @@ class MaskRCNN(object):
     The actual Keras model is in the keras_model property.
     """
 
-    def __init__(self, mode, config, model_dir, s):
+    def __init__(self, mode, config, model_dir, s, checkp_path):
         """
         mode: Either "training" or "inference"
         config: A Sub-class of the Config class
@@ -287,6 +288,8 @@ class MaskRCNN(object):
         self.set_log_dir()
         self.keras_model = self.build(mode=mode, config=config)
         self.s = s
+        self.checkp_path = checkp_path
+
 
     def build(self, mode, config):
         """Build Mask R-CNN architecture.
@@ -495,6 +498,8 @@ class MaskRCNN(object):
         else:
             # Network Heads
             # Proposal classifier and BBox regressor heads
+            from mrcnn.feature_pyramid_network_heads import fpn_classifier_graph, build_fpn_mask_graph
+
             mrcnn_class_logits, mrcnn_class, mrcnn_bbox =\
                 fpn_classifier_graph(rpn_rois, mrcnn_feature_maps, input_image_meta,
                                      config.POOL_SIZE, config.NUM_CLASSES,
@@ -723,8 +728,8 @@ class MaskRCNN(object):
             self.config.NAME.lower(), now))
 
         # Path to save after each epoch. Include placeholders that get filled by Keras.
-        self.checkpoint_path = os.path.join(self.log_dir, "mask_rcnn_{}_*epoch*.h5".format(
-            self.config.NAME.lower()))
+        self.checkpoint_path = os.path.join(self.log_dir, "mask_rcnn_{}_{}_*epoch*.h5".format( 
+            self.config.NAME.lower(), 'test')) # TODO: custom checpoint path with trial number
         self.checkpoint_path = self.checkpoint_path.replace(
             "*epoch*", "{epoch:04d}")
 
@@ -850,7 +855,7 @@ class MaskRCNN(object):
         for image in images:
             # Resize image
             # TODO: move resizing to mold_image()
-            from data_generator_and_formatting import mold_image
+            from mrcnn.data_generator_and_formatting import mold_image
             molded_image, window, scale, padding, crop = utils.resize_image(
                 image,
                 min_dim=self.config.IMAGE_MIN_DIM,
@@ -859,7 +864,7 @@ class MaskRCNN(object):
                 mode=self.config.IMAGE_RESIZE_MODE)
             molded_image = mold_image(molded_image, self.config)
             # Build image_meta
-            from data_generator_and_formatting import compose_image_meta
+            from mrcnn.data_generator_and_formatting import compose_image_meta
             image_meta = compose_image_meta(
                 0, image.shape, molded_image.shape, window, scale,
                 np.zeros([self.config.NUM_CLASSES], dtype=np.int32))

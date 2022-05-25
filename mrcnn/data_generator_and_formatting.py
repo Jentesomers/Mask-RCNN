@@ -20,7 +20,7 @@ from mrcnn import utils
 #  Data Generator
 ############################################################
 
-def load_image_gt(dataset, config, image_id, augmentation):             #augmentation has been set to Gaussian noise in line 787 in model.py for training set
+def load_image_gt(dataset, config, image_id, augmentation=None):             #augmentation has been set to Gaussian noise in line 787 in model.py for training set
     """Load and return ground truth data for an image (image, mask, bounding boxes).
 
     augmentation: Optional. An imgaug (https://github.com/aleju/imgaug) augmentation.
@@ -87,7 +87,7 @@ def load_image_gt(dataset, config, image_id, augmentation):             #augment
     # and here is to filter them out
     idxx = np.sum(mask, axis=(0, 1)) > 0
     mask = mask[:, :, idxx]
-    print(class_ids)
+    #print(class_ids)
     class_ids = class_ids[idxx]
     # Bounding boxes. Note that some boxes might be all zeros
     # if the corresponding mask got cropped out.
@@ -530,7 +530,7 @@ class DataGenerator(keras.utils.Sequence):
             image, image_meta, gt_class_ids, gt_boxes, gt_masks = \
                 load_image_gt(self.dataset, self.config, image_id,
                               augmentation=self.augmentation)           # In model.py augmentation has been set to Gaussion noise for the train set and still none for val set
-            print(f'Augmentation used = {self.augmentation}')
+            #print(f'Augmentation used = {self.augmentation}')
             # Skip images that have no instances. This can happen in cases
             # where we train on a subset of classes and the image doesn't
             # have any of the classes we care about.

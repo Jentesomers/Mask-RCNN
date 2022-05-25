@@ -11,15 +11,17 @@ import matplotlib.pyplot as plt
 from tensorflow.python.keras.callbacks import TensorBoard
 from time import time
 import tensorflow as tf
+from mrcnn.data_generator_and_formatting import load_image_gt, mold_image
 
 
 # Root directory of the project
-ROOT_DIR = r"C:\Users\jente\OneDrive\Documenten\GitHub\Mask-RCNN"
+ROOT_DIR = r"/host/Mask-RCNN"
 
 # Import Mask RCNN
 sys.path.append(ROOT_DIR)  # To find local version of the library
 from mrcnn.config import Config
 from mrcnn import model as modellib, utils
+from mrcnn.data_generator_and_formatting import load_image_gt, mold_image
 
 
 # Path to trained weights file
@@ -51,6 +53,14 @@ class CustomConfig(Config):
     # Skip detections with < 90% confidence
     DETECTION_MIN_CONFIDENCE = 0.9
 
+    TRAIN_BN = False
+    #USE_MINI_MASK = False
+
+
+
+
+
+
 ############################################################
 #  Dataset
 ############################################################
@@ -68,7 +78,7 @@ class CustomDataset(utils.Dataset):
         self.add_class("object", 3, "foam_beer")
 
         # Train or validation dataset?
-        assert subset in ["train", "val","test"]
+        assert subset in ["train", "val", "test"]
         dataset_dir = os.path.join(dataset_dir, subset)
 
         # We mostly care about the x and y coordinates of each region
@@ -85,7 +95,7 @@ class CustomDataset(utils.Dataset):
         
         # Add images
         for a in annotations:
-            # print(a)
+	    # print(a)
             # Get the x, y coordinates of points of the polygons that make up
             # the outline of each object instance. There are stores in the
             # shape_attributes (see json format above)
@@ -126,8 +136,7 @@ class CustomDataset(utils.Dataset):
                 width=width, height=height,
                 polygons=polygons,
                 num_ids=num_ids
-                )
-        print('Dataset created!')
+                )        	
 
     def load_mask(self, image_id):
         """Generate instance masks for an image.
@@ -179,14 +188,16 @@ import optuna
 def objective(trial):
     config = CustomConfig()
     config.display()  # Display model configuration
+    epoch = trial.suggest_int('epoch', 5, 35, log=True)
+    lr = trial.suggest_float('lr', 1e-5, 1e-1, log=True)
+    checkp_path = f'checkpoint_{trial.number}'
 
     standard_deviation = trial.suggest_float('standard_deviation', 1e-5, 0.5,
                                              log=True)  # Create upper limit for standard deviation of the Gaussian noise added to the images so it can be optimized with optuna, added it as argument to MaskRCNN class (see also model.py)
-    model = modellib.MaskRCNN(mode="training", config=config,
-                              model_dir=DEFAULT_LOGS_DIR, s=standard_deviation)
+    model = modellib.MaskRCNN(mode="training", config=config,model_dir=DEFAULT_LOGS_DIR, s=standard_deviation, checkp_path=checkp_path)
 
-    tensorboard = TensorBoard(log_dir="logs/train".format(
-        time()))  # open Anaconda Prompt and write tensorboard --logdir=logs/train to visualize
+    tensorboard = TensorBoard(log_dir=f"logs/{trial.number}".format(
+        time()), profile_batch=0)  # open Anaconda Prompt and write tensorboard --logdir=logs/train to visualize
     callback = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=3)
 
     weights_path = COCO_WEIGHTS_PATH
@@ -197,36 +208,36 @@ def objective(trial):
     model.load_weights(weights_path, by_name=True, exclude=[
         "mrcnn_class_logits", "mrcnn_bbox_fc",
         "mrcnn_bbox", "mrcnn_mask"])
-    print('weights loaded, beginning to train')
+    #print('weights loaded, beginning to train')
 
 
     """Train the model."""
     # Training dataset.
     dataset_train = CustomDataset()
-    dataset_train.load_custom(r"C:\Users\jente\OneDrive\Documenten\GitHub\Mask-RCNN\Dataset", "train")
+    dataset_dir = ROOT_DIR + "/Dataset"
+    dataset_train.load_custom(dataset_dir, "train")
     dataset_train.prepare()
 
     # Validation dataset
     dataset_val = CustomDataset()
-    dataset_val.load_custom(r"C:\Users\jente\OneDrive\Documenten\GitHub\Mask-RCNN\Dataset", "val")
+    dataset_val.load_custom(dataset_dir, "val")
     dataset_val.prepare()
 
-    print('Both datasets have been prepared')
+    #print('Both datasets have been prepared')
 
     # Load and display random samples                           Better place would be after train(model), but training fails due to memory
-    image_ids = np.random.choice(dataset_train.image_ids, 4)
-    for image_id in image_ids:
-        image = dataset_train.load_image(image_id)
-        mask, class_ids = dataset_train.load_mask(image_id)
-        visualize.display_top_masks(image, mask, class_ids, dataset_train.class_names)
+    # image_ids = np.random.choice(dataset_train.image_ids, 4)
+    # for image_id in image_ids:
+    #     image = dataset_train.load_image(image_id)
+    #     mask, class_ids = dataset_train.load_mask(image_id)
+    #     visualize.display_top_masks(image, mask, class_ids, dataset_train.class_names)
 
     # Do training in two stages, first only train weights of top layers, then do fine tuning by training all layers with a lower learning rate
-    print("Training network heads..")
+    #print("Training network heads..")
 
 
     # make parameter for the hyper parameters to optimize with optuna
-    epoch = trial.suggest_int('epoch', 5, 35, log=True)
-    lr = trial.suggest_float('lr', 1e-5, 1e-1, log=True)
+    
     model.train(dataset_train, dataset_val,
                 learning_rate=lr,
                 # Set lr as a parameter to be optimized with optuna (no longer taken from config.py)
@@ -248,6 +259,9 @@ def objective(trial):
     class InferenceConfig(CustomConfig):        # Opportunity to overrite configurations
         GPU_COUNT = 1
         IMAGES_PER_GPU = 1
+        USE_MINI_MASK  = False
+
+
 
     inference_config = InferenceConfig()
 
@@ -262,28 +276,23 @@ def objective(trial):
     model_path = model.find_last()
 
     # Load trained weights
-    print("Loading weights from ", model_path)
+    #print("Loading weights from ", model_path)
     model.load_weights(model_path, by_name=True)
 
     # Compute VOC-Style mAP @ IoU=0.5
     # Running on test set
 
-    #load test set
-    # Validation dataset
-    dataset_test = CustomDataset()
-    dataset_test.load_custom(r"C:\Users\jente\OneDrive\Documenten\GitHub\Mask-RCNN\Dataset", "test")        #Still need to put test set in dataset (and export annotations as json from VIA)
-    dataset_test.prepare()
-
-    test_image_ids = dataset_test.image_ids
+    
+    test_image_ids = dataset_val.image_ids
 
     # AP (Average precision) is a popular metric in measuring the accuracy of object detectors. IoU (Intersection over union) measures the overlap between 2 boundaries
     APs = []
     for image_id in test_image_ids:
         # Load image and ground truth data
         image, image_meta, gt_class_id, gt_bbox, gt_mask = \
-            modellib.load_image_gt(dataset_test, inference_config,
+            load_image_gt(dataset_val, inference_config,
                                    image_id)  # , use_mini_mask=False)
-        molded_images = np.expand_dims(modellib.mold_image(image, inference_config), 0)
+        molded_images = np.expand_dims(mold_image(image, inference_config), 0)
         # Run object detection
         results = model.detect([image], verbose=0)
         r = results[0]
@@ -301,4 +310,4 @@ def objective(trial):
 
 # 3. Create a study object and optimize the objective function.
 study = optuna.create_study(direction='maximize')
-study.optimize(objective, n_trials=10)
+study.optimize(objective, n_trials=1)

@@ -9,15 +9,15 @@ import tensorflow as tf
 import tensorflow.keras as keras
 import tensorflow.keras.backend as backend
 import tensorflow.keras.layers as layers
-import tensorflow.keras.utils as utils
+#import tensorflow.keras.utils as utils
 from tensorflow.python.eager import context
 import tensorflow.keras.models as models
-from proposal_layer import apply_box_deltas_graph, clip_boxes_graph
-from data_generator_and_formatting import parse_image_meta_graph
-from miscellenous_graph_functions import norm_boxes_graph
+from mrcnn.proposal_layer import apply_box_deltas_graph, clip_boxes_graph
+from mrcnn.data_generator_and_formatting import parse_image_meta_graph
+from mrcnn.miscellenous_graph_functions import norm_boxes_graph
 
 
-import utils
+from mrcnn import utils
 
 ############################################################
 #  Detection Layer
